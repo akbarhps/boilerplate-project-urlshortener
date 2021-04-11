@@ -2,6 +2,8 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const express = require('express');
 const cors = require('cors');
+var bodyParser = require('body-parser');
+var validUrl = require('valid-url');
 const Url = require('./models/url.model');
 const app = express();
 
@@ -9,6 +11,10 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(cors());
+
+app.use(bodyParser.urlencoded({
+    extended: false
+}));
 
 app.use(express.json());
 
@@ -30,28 +36,30 @@ app.get('/', function (req, res) {
 // Your first API endpoint
 app.post('/api/shorturl/new', async function (req, res) {
     const url = new Url();
-    const originalUrl = req.body.original_url;
+    const originalUrl = req.body.url;
+    if (!validUrl.isWebUri(originalUrl)) {
+        return res.send({ error: 'invalid url' });
+    }
     try {
-        const isValid = new URL(originalUrl);
         url.original_url = originalUrl;
         url.short_url = randomString(7);
         await url.save();
         res.json(url);
     } catch (e) {
-        res.send({error: 'invalid url'});
+        res.send({ error: 'invalid url' });
     }
 });
 
 app.get('/api/shorturl/:short_url', async (req, res) => {
     const short_url = req.params.short_url;
     try {
-        const result = await Url.findOne({short_url});
+        const result = await Url.findOne({ short_url });
         if (!result) {
-            res.json({error: "invalid url"});
+            res.json({ error: "invalid url" });
         }
         res.redirect(result.original_url);
     } catch (e) {
-        res.json({error: e.message});
+        res.json({ error: e.message });
     }
 });
 
